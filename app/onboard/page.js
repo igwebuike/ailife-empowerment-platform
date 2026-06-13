@@ -1,0 +1,3 @@
+
+import PublicNav from '@/components/PublicNav'
+export default function Onboard(){return <><PublicNav/><main className="mx-auto max-w-3xl px-5 py-16"><div className="card p-8"><h1 className="text-4xl font-black text-purple-950">Customer Onboarding</h1><p className="mt-3 text-slate-600">This production package is configured for Render PostgreSQL. Customer onboarding records should be submitted through secured backend API routes connected to the customers, kyc_documents, approval_workflows, and audit_logs tables.</p><p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">Before collecting real KYC documents, configure secure object storage, retention policy, encryption, and NDPR-compliant consent language.</p></div></main></>}
