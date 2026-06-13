@@ -19,6 +19,7 @@ const nav=[
  ['/dashboard/notifications','SMS/Email Outbox',Bell],
  ['/dashboard/alerts','Fraud Alerts',ShieldAlert],
  ['/dashboard/staff','Staff & Roles',UserCog],
+ ['/dashboard/staff-management','Staff Management',UserCog],
  ['/dashboard/staff-onboarding','Staff Onboarding',ClipboardCheck],
  ['/dashboard/training','Staff Training',GraduationCap],
  ['/dashboard/onboarding-checklist','Onboarding Checklists',ClipboardCheck],

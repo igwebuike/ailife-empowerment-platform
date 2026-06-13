@@ -1,0 +1,11 @@
+'use client'
+import PublicNav from '@/components/PublicNav'
+import { useState } from 'react'
+
+export default function StaffSetup(){
+  const [form,setForm]=useState({fullName:'Executive Director',email:'',phone:'',department:'Operations',role:'executive_director',branch:'Head Office Branch',area:'All',password:'ChangeMe@12345',canViewAllBranches:true,mfaRequired:false})
+  const [msg,setMsg]=useState('')
+  function update(e){const {name,value,type,checked}=e.target; setForm(p=>({...p,[name]:type==='checkbox'?checked:value}))}
+  async function submit(e){e.preventDefault(); setMsg('Creating first staff profile...'); const res=await fetch('/api/staff',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(form)}); const body=await res.json(); if(!res.ok){setMsg(body.error||'Setup failed')}else{setMsg(`Created ${body.staff.email}. Temporary password: ${body.temporaryPassword}`)}}
+  return <><PublicNav/><main className="mx-auto min-h-[80vh] max-w-3xl px-5 py-12"><form onSubmit={submit} className="card p-8"><h1 className="text-3xl font-black text-purple-950">Initial Staff Setup</h1><p className="mt-3 text-slate-600">Use this once to create the first Executive Director/admin login. After the first staff account exists, only authorized leadership can add staff.</p><div className="mt-6 grid gap-4 md:grid-cols-2"><label className="space-y-2"><span className="font-bold">Full Name</span><input className="input" name="fullName" value={form.fullName} onChange={update}/></label><label className="space-y-2"><span className="font-bold">Email</span><input className="input" name="email" value={form.email} onChange={update} type="email" required/></label><label className="space-y-2"><span className="font-bold">Phone</span><input className="input" name="phone" value={form.phone} onChange={update}/></label><label className="space-y-2"><span className="font-bold">Password</span><input className="input" name="password" value={form.password} onChange={update}/></label></div><button className="btn btn-gold mt-6 w-full">Create First Staff Login</button>{msg&&<p className="mt-4 rounded-xl bg-purple-50 p-3 text-sm font-bold text-purple-900">{msg}</p>}</form></main></>
+}

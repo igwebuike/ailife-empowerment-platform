@@ -1,5 +1,42 @@
-
 'use client'
 import PublicNav from '@/components/PublicNav'
 import { useState } from 'react'
-export default function Login(){const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [otp,setOtp]=useState(''); const [msg,setMsg]=useState(''); async function submit(e){e.preventDefault(); setMsg(''); const res=await fetch('/api/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email,password,otp})}); const body=await res.json(); if(!res.ok){setMsg(body.error||'Login failed')}else{location.href='/dashboard'}} return <><PublicNav/><main className="mx-auto grid min-h-[80vh] max-w-6xl place-items-center px-5"><form onSubmit={submit} className="card w-full max-w-md p-8"><h1 className="text-3xl font-black text-purple-950">Staff Login</h1><p className="mt-2 text-slate-600">Render PostgreSQL authentication with optional authenticator-app 2FA.</p><label className="mt-6 block text-sm font-bold">Email</label><input className="input mt-2" value={email} onChange={e=>setEmail(e.target.value)} type="email" required/><label className="mt-4 block text-sm font-bold">Password</label><input className="input mt-2" value={password} onChange={e=>setPassword(e.target.value)} type="password" required/><label className="mt-4 block text-sm font-bold">2FA Code</label><input className="input mt-2" value={otp} onChange={e=>setOtp(e.target.value)} placeholder="Required when ENABLE_2FA=true"/><button className="btn btn-primary mt-6 w-full">Enter Command Center</button>{msg&&<p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{msg}</p>}</form></main></>}
+
+export default function Login(){
+  const [email,setEmail]=useState('')
+  const [password,setPassword]=useState('')
+  const [otp,setOtp]=useState('')
+  const [msg,setMsg]=useState('')
+
+  async function submit(e){
+    e.preventDefault()
+    setMsg('')
+    const res=await fetch('/api/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email,password,otp})})
+    const body=await res.json()
+    if(!res.ok){setMsg(body.error||'Login failed')}else{location.href='/dashboard'}
+  }
+
+  return <>
+    <PublicNav/>
+    <main className="mx-auto grid min-h-[80vh] max-w-6xl place-items-center px-5">
+      <form onSubmit={submit} className="card w-full max-w-md p-8">
+        <h1 className="text-3xl font-black text-purple-950">Secure Staff Access</h1>
+        <p className="mt-3 leading-7 text-slate-600">
+          Authorized staff can access the AILIFE Command Center based on their assigned role, department, branch and approval level.
+        </p>
+        <label className="mt-6 block text-sm font-bold">Email</label>
+        <input className="input mt-2" value={email} onChange={e=>setEmail(e.target.value)} type="email" required/>
+        <label className="mt-4 block text-sm font-bold">Password</label>
+        <input className="input mt-2" value={password} onChange={e=>setPassword(e.target.value)} type="password" required/>
+        <label className="mt-4 block text-sm font-bold">2FA Code</label>
+        <input className="input mt-2" value={otp} onChange={e=>setOtp(e.target.value)} placeholder="Required when multi-factor authentication is enabled"/>
+        <button className="btn btn-primary mt-6 w-full">Sign In Securely</button>
+        <div className="mt-4 flex justify-between text-sm font-bold text-purple-900">
+          <a href="/board-login">Board / Investor Login</a>
+          <a href="/staff-setup">Initial Staff Setup</a>
+        </div>
+        {msg&&<p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{msg}</p>}
+      </form>
+    </main>
+  </>
+}
