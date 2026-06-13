@@ -576,3 +576,272 @@ values ('AILIFE Super Admin','admin@ailifeempowerment.com','','admin','Head Offi
 on conflict (email) do nothing;
 
 -- seed_admin_staff
+
+-- =========================
+-- 11) AILIFE-SPECIFIC CONFIGURATION: BRANCHES, LOAN PRODUCTS, ONBOARDING & TRAINING
+-- =========================
+
+alter table branches drop constraint if exists branches_status_check;
+alter table branches add constraint branches_status_check check(status in ('active','inactive','suspended','closed'));
+alter table branches add column if not exists state text;
+alter table branches add column if not exists area text;
+
+alter table staff_profiles drop constraint if exists staff_profiles_role_check;
+alter table staff_profiles add constraint staff_profiles_role_check check (role in (
+  'board_trustee','governing_council','executive_director','program_director','program_manager','area_manager','branch_manager','credit_officer','accountant','program_officer','secretary','receptionist','cleaner','security','admin','finance_officer','compliance_officer','auditor','board_viewer','agent_supervisor','teller'
+));
+
+create table if not exists organizational_units (
+  id uuid primary key default gen_random_uuid(),
+  department text not null check(department in ('operations','administration','governance')),
+  role_name text not null,
+  reports_to text,
+  level_no int not null,
+  created_at timestamptz default now(),
+  unique(department, role_name)
+);
+
+create table if not exists loan_products (
+  id uuid primary key default gen_random_uuid(),
+  product_code text unique not null,
+  product_name text not null,
+  min_amount numeric(14,2) not null,
+  max_amount numeric(14,2),
+  tenor_min_days int,
+  tenor_max_days int,
+  tenor_min_weeks int,
+  tenor_max_weeks int,
+  tenor_min_months int,
+  tenor_max_months int,
+  interest_rate numeric(5,2) not null,
+  interest_method text not null check(interest_method in ('flat','flat_monthly')),
+  risk_premium_rate numeric(5,2) default 2.00,
+  management_fee_rate numeric(5,2) default 1.00,
+  processing_fee_rate numeric(5,2) default 1.00,
+  default_penalty_rate numeric(5,2) default 5.00,
+  status text default 'active' check(status in ('active','inactive')),
+  created_at timestamptz default now()
+);
+
+alter table loans add column if not exists product_id uuid references loan_products(id);
+alter table loans add column if not exists product_code text;
+alter table loans add column if not exists risk_premium_amount numeric(14,2) default 0;
+alter table loans add column if not exists management_fee_amount numeric(14,2) default 0;
+alter table loans add column if not exists processing_fee_amount numeric(14,2) default 0;
+alter table loans add column if not exists penalty_amount numeric(14,2) default 0;
+alter table loans add column if not exists recommended_by uuid references staff_profiles(id);
+alter table loans add column if not exists area_approved_by uuid references staff_profiles(id);
+alter table loans add column if not exists program_director_approved_by uuid references staff_profiles(id);
+
+create table if not exists loan_approval_rules (
+  id uuid primary key default gen_random_uuid(),
+  rule_name text unique not null,
+  min_amount numeric(14,2) default 0,
+  max_amount numeric(14,2),
+  processor_role text not null default 'credit_officer',
+  recommender_role text not null default 'branch_manager',
+  approver_role text not null,
+  disburser_role text not null default 'branch_manager',
+  finance_release_required boolean default true,
+  status text default 'active' check(status in ('active','inactive')),
+  created_at timestamptz default now()
+);
+
+create table if not exists staff_onboarding_cases (
+  id uuid primary key default gen_random_uuid(),
+  staff_id uuid references staff_profiles(id) on delete cascade,
+  full_name text not null,
+  role text not null,
+  branch_id uuid references branches(id),
+  email text,
+  phone text,
+  status text default 'pending' check(status in ('pending','documents_pending','training','active','rejected','terminated')),
+  start_date date,
+  created_by uuid references staff_profiles(id),
+  created_at timestamptz default now()
+);
+
+create table if not exists training_modules (
+  id uuid primary key default gen_random_uuid(),
+  module_code text unique not null,
+  title text not null,
+  audience text not null,
+  required boolean default true,
+  status text default 'active' check(status in ('active','inactive')),
+  created_at timestamptz default now()
+);
+
+create table if not exists staff_training_records (
+  id uuid primary key default gen_random_uuid(),
+  staff_id uuid references staff_profiles(id) on delete cascade,
+  module_id uuid references training_modules(id),
+  status text default 'not_started' check(status in ('not_started','in_progress','completed','failed','waived')),
+  score numeric(5,2),
+  completed_at timestamptz,
+  created_at timestamptz default now(),
+  unique(staff_id, module_id)
+);
+
+create table if not exists client_onboarding_cases (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid references customers(id) on delete cascade,
+  full_name text not null,
+  phone text not null,
+  branch_id uuid references branches(id),
+  onboarding_channel text default 'branch' check(onboarding_channel in ('branch','field','agent','online','phone')),
+  status text default 'started' check(status in ('started','kyc_pending','guarantor_pending','verification','approved','rejected')),
+  assigned_staff_id uuid references staff_profiles(id),
+  created_at timestamptz default now()
+);
+
+create table if not exists onboarding_checklist_items (
+  id uuid primary key default gen_random_uuid(),
+  checklist_type text not null check(checklist_type in ('staff','client')),
+  item_code text not null,
+  title text not null,
+  required boolean default true,
+  sort_order int default 0,
+  created_at timestamptz default now(),
+  unique(checklist_type,item_code)
+);
+
+create table if not exists onboarding_checklist_progress (
+  id uuid primary key default gen_random_uuid(),
+  checklist_item_id uuid references onboarding_checklist_items(id),
+  staff_case_id uuid references staff_onboarding_cases(id) on delete cascade,
+  client_case_id uuid references client_onboarding_cases(id) on delete cascade,
+  status text default 'pending' check(status in ('pending','completed','rejected','not_applicable')),
+  completed_by uuid references staff_profiles(id),
+  completed_at timestamptz,
+  notes text,
+  created_at timestamptz default now(),
+  check ((staff_case_id is not null and client_case_id is null) or (staff_case_id is null and client_case_id is not null))
+);
+
+-- Auto-calculate AILIFE fees on loan insert/update when product exists.
+create or replace function calculate_ailife_loan_fees() returns trigger as $$
+declare p loan_products%rowtype;
+begin
+  if new.product_id is not null then
+    select * into p from loan_products where id=new.product_id;
+    new.product_code := p.product_code;
+    new.interest_rate := p.interest_rate;
+    new.risk_premium_amount := round(new.principal * p.risk_premium_rate / 100, 2);
+    new.management_fee_amount := round(new.principal * p.management_fee_rate / 100, 2);
+    new.processing_fee_amount := round(new.principal * p.processing_fee_rate / 100, 2);
+  end if;
+  return new;
+end; $$ language plpgsql;
+drop trigger if exists trg_calculate_ailife_loan_fees on loans;
+create trigger trg_calculate_ailife_loan_fees before insert or update on loans for each row execute function calculate_ailife_loan_fees();
+
+create or replace view staff_portfolio_report as
+select sp.id staff_id, sp.full_name, sp.role, coalesce(b.name, sp.branch) branch_name,
+       count(distinct c.id) clients_onboarded,
+       count(distinct l.id) loans_created,
+       coalesce(sum(l.principal),0) total_principal,
+       coalesce(sum(l.outstanding_balance),0) outstanding_portfolio,
+       coalesce(sum(case when t.type='loan_repayment' and t.status='approved' then t.amount else 0 end),0) repayments_collected,
+       coalesce(sum(case when t.type='deposit' and t.status='approved' then t.amount else 0 end),0) savings_collected
+from staff_profiles sp
+left join branches b on b.id=sp.branch_id
+left join customers c on c.created_by=sp.id
+left join loans l on l.created_by=sp.id
+left join transactions t on t.maker_id=sp.id
+group by sp.id, sp.full_name, sp.role, b.name, sp.branch;
+
+create or replace view onboarding_status_report as
+select 'staff' record_type, status, count(*) record_count from staff_onboarding_cases group by status
+union all
+select 'client' record_type, status, count(*) record_count from client_onboarding_cases group by status;
+
+-- Replace daily collection report with branch-aware version.
+drop view if exists daily_collection_report;
+create or replace view daily_collection_report as
+select date(t.created_at) report_date, coalesce(b.name,c.branch,'Unassigned') branch, t.type, t.status,
+       count(*) transaction_count, coalesce(sum(t.amount),0) total_amount
+from transactions t
+left join customers c on c.id=t.customer_id
+left join branches b on b.id=c.branch_id
+group by date(t.created_at), coalesce(b.name,c.branch,'Unassigned'), t.type, t.status;
+
+-- Seed AILIFE branches.
+insert into branches(branch_code,name,state,area,address,status) values
+('HQ','Head Office Branch',null,'Head Office','Head Office','active'),
+('EDE','Ede Branch','Osun','Osun State Branches','Ede, Osun State','active'),
+('OSOGBO','Osogbo Branch','Osun','Osun State Branches','Osogbo, Osun State','active'),
+('OWODE','Owode Branch','Osun','Osun State Branches','Owode, Osun State','active'),
+('IBADAN1','Ibadan 1','Oyo','Ibadan Branches','Ibadan, Oyo State','active'),
+('IBADAN2','Ibadan 2','Oyo','Ibadan Branches','Ibadan, Oyo State','active'),
+('RUMUDARA','Rumudara Branch','Rivers','Port Harcourt Branches','Rumudara, Port Harcourt','active'),
+('RUMUKURUSHI','Rumukurushi Branch','Rivers','Port Harcourt Branches','Rumukurushi, Port Harcourt','inactive'),
+('ENEKA','Eneka Branch','Rivers','Port Harcourt Branches','Eneka, Port Harcourt','inactive')
+on conflict(branch_code) do update set name=excluded.name,state=excluded.state,area=excluded.area,address=excluded.address,status=excluded.status;
+
+-- Seed organizational structure.
+insert into organizational_units(department,role_name,reports_to,level_no) values
+('governance','Board of Trustees',null,1),
+('governance','Governing Council','Board of Trustees',2),
+('governance','Executive Director','Governing Council',3),
+('operations','Executive Director',null,1),
+('operations','Program Director','Executive Director',2),
+('operations','Program Manager','Program Director',3),
+('operations','Area Manager','Program Manager',4),
+('operations','Branch Manager','Area Manager',5),
+('operations','Credit Officer','Branch Manager',6),
+('administration','Executive Director',null,1),
+('administration','Program Director','Executive Director',2),
+('administration','Accountant','Program Director',3),
+('administration','Program Officer','Program Director',3),
+('administration','Secretary / Receptionist','Program Director',4),
+('administration','Cleaners and Securities','Secretary / Receptionist',5)
+on conflict(department,role_name) do update set reports_to=excluded.reports_to, level_no=excluded.level_no;
+
+-- Seed AILIFE loan products.
+insert into loan_products(product_code,product_name,min_amount,max_amount,tenor_min_days,tenor_max_days,tenor_min_weeks,tenor_max_weeks,tenor_min_months,tenor_max_months,interest_rate,interest_method,risk_premium_rate,management_fee_rate,processing_fee_rate,default_penalty_rate) values
+('DL','Daily Loan',20000,250000,25,30,null,null,null,null,20,'flat',2,1,1,5),
+('WL','Weekly Loan',50000,500000,null,null,12,16,null,null,20,'flat',2,1,1,5),
+('ML','Monthly Loan',200000,null,null,null,null,null,3,6,10,'flat_monthly',2,1,1,5)
+on conflict(product_code) do update set product_name=excluded.product_name,min_amount=excluded.min_amount,max_amount=excluded.max_amount,interest_rate=excluded.interest_rate,interest_method=excluded.interest_method;
+
+-- Seed approval rules based on owner-provided policy.
+insert into loan_approval_rules(rule_name,min_amount,max_amount,processor_role,recommender_role,approver_role,disburser_role,finance_release_required) values
+('Loans up to 400k',0,400000,'credit_officer','branch_manager','area_manager','branch_manager',true),
+('Loans above 400k',400000.01,null,'credit_officer','branch_manager','program_director','branch_manager',true)
+on conflict(rule_name) do update set max_amount=excluded.max_amount,approver_role=excluded.approver_role,finance_release_required=excluded.finance_release_required;
+
+-- Seed onboarding and training checklists.
+insert into onboarding_checklist_items(checklist_type,item_code,title,required,sort_order) values
+('client','CLIENT_PROFILE','Capture client biodata, phone, address, branch and business details',true,1),
+('client','KYC_ID','Collect BVN/NIN or valid identification',true,2),
+('client','PHOTO','Capture client photo/selfie',true,3),
+('client','GUARANTOR','Capture guarantor information and form',true,4),
+('client','BUSINESS_VERIFICATION','Verify business/location in the field',true,5),
+('client','CONSENT','Capture data consent and loan terms acceptance',true,6),
+('staff','STAFF_PROFILE','Create staff profile, role, branch, phone and email',true,1),
+('staff','DOCUMENTS','Collect employment documents and ID',true,2),
+('staff','ROLE_ACCESS','Assign role-based access and branch permissions',true,3),
+('staff','MFA_SETUP','Enable two-factor authentication',true,4),
+('staff','TRAINING','Complete required platform and governance training',true,5),
+('staff','APPROVAL','Manager approves staff activation',true,6)
+on conflict(checklist_type,item_code) do update set title=excluded.title, required=excluded.required, sort_order=excluded.sort_order;
+
+insert into training_modules(module_code,title,audience,required) values
+('PLATFORM-BASICS','Using AILIFE Command Center for remote work and monitoring','all_staff',true),
+('CLIENT-ONBOARDING','Client onboarding, KYC capture and field verification','credit_officer,branch_manager,agent',true),
+('LOAN-WORKFLOW','AILIFE loan products, fees, approval workflow and disbursement policy','credit_officer,branch_manager,area_manager,program_director',true),
+('COLLECTIONS','Repayments, savings collection, alerts and outstanding balance management','credit_officer,branch_manager,teller,agent',true),
+('FRAUD-GOVERNANCE','Maker-checker, audit trail, fraud red flags and escalation','all_staff',true),
+('REPORTING','Daily, weekly, monthly, branch and staff performance reporting','branch_manager,area_manager,program_manager,executive_director',true)
+on conflict(module_code) do update set title=excluded.title,audience=excluded.audience,required=excluded.required;
+
+insert into governance_policies(policy_name,policy_value) values
+('ailife_active_branches','Head Office, Ede, Osogbo, Owode, Ibadan 1, Ibadan 2, Rumudara'),
+('ailife_inactive_branches','Rumukurushi, Eneka'),
+('ailife_loan_fee_total','4% upfront charges: 2% risk premium, 1% management fee, 1% processing/bank charge'),
+('ailife_default_penalty','5% flat monthly on overdue amount'),
+('ailife_approval_rule','Credit Officer processes, Branch Manager recommends, Area Manager approves 0-400k, Program Director approves above 400k, Branch Manager disburses'),
+('staff_onboarding_required','true'),
+('client_onboarding_checklist_required','true'),
+('staff_training_required_before_activation','true')
+on conflict(policy_name) do update set policy_value=excluded.policy_value;

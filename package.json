@@ -19,6 +19,7 @@
   "devDependencies": {
     "autoprefixer": "latest",
     "postcss": "latest",
-    "tailwindcss": "latest"
+    "tailwindcss": "latest",
+    "@tailwindcss/postcss": "latest"
   }
 }
