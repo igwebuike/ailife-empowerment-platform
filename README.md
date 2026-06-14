@@ -99,3 +99,25 @@ This package now includes the owner-provided operational setup:
 - Staff training modules for platform use, onboarding, loans, collections, fraud governance and reporting
 
 Keep updating `database/schema.sql` as the owner provides savings products, repayment channels, staff list and SMS/payment provider details.
+
+
+## v3.3 Credit Bureau Ready Upgrade
+
+This build includes the deploy-now / activate-later credit bureau architecture:
+
+- Credit Bureau Integration Module
+- Credit Bureau Configuration screen
+- Internal Risk Scoring Engine
+- Manual Credit Review Workflow
+- CreditRegistry/CRC/FirstCentral provider placeholders
+- API routes for creating placeholder bureau checks and calculating internal risk scores
+
+Live bureau calls remain disabled until AILIFE completes provider registration and receives official credentials. Use Render environment variables for secrets; do not store raw API keys in the database.
+
+Recommended deployment flow:
+
+1. Deploy app and database on Render.
+2. Run `database/schema.sql` against Render PostgreSQL.
+3. Use Internal Risk Scoring + Manual Credit Review immediately.
+4. After CreditRegistry approval, add credentials in Render environment variables.
+5. Update the Credit Bureau Configuration screen/table to enable production checks.

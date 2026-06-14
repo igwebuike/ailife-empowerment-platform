@@ -1,0 +1,2 @@
+import DataPage from '@/components/DataPage'
+export default function Page(){return <DataPage title='Internal Risk Scoring Engine' subtitle='AILIFE internal credit scoring used before CreditRegistry credentials are issued, with risk factors and auto manual-review creation.' table='internal_risk_scores' cols={['score','risk_band','decision','calculated_by','calculated_at','created_at']} moneyCols={[]}/>}

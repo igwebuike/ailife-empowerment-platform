@@ -1,0 +1,2 @@
+import DataPage from '@/components/DataPage'
+export default function Page(){return <DataPage title='Credit Bureau Integration Module' subtitle='CreditRegistry/CRC/FirstCentral-ready checks. Live calls stay disabled until credentials are approved; internal risk engine remains active now.' table='credit_bureau_checks' cols={['check_type','status','bureau_score','bureau_decision','error_message','created_at','completed_at']} moneyCols={[]}/>}

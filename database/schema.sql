@@ -845,3 +845,188 @@ insert into governance_policies(policy_name,policy_value) values
 ('client_onboarding_checklist_required','true'),
 ('staff_training_required_before_activation','true')
 on conflict(policy_name) do update set policy_value=excluded.policy_value;
+
+
+-- =========================
+-- 20) CREDIT BUREAU READY MODULE — AILIFE v3.3
+-- No live bureau call is required until CreditRegistry/CRC/FirstCentral credentials are issued.
+-- This lets AILIFE deploy now, run internal scoring/manual reviews, and later activate API keys.
+-- =========================
+
+create table if not exists credit_bureau_providers (
+  id uuid primary key default gen_random_uuid(),
+  provider_code text unique not null,
+  provider_name text not null,
+  base_url text,
+  api_key_ref text,
+  client_id_ref text,
+  client_secret_ref text,
+  environment text default 'sandbox' check(environment in ('sandbox','production')),
+  enabled boolean default false,
+  live_checks_allowed boolean default false,
+  notes text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table if not exists credit_bureau_checks (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid references customers(id),
+  loan_id uuid references loans(id),
+  provider_id uuid references credit_bureau_providers(id),
+  check_type text default 'credit_report' check(check_type in ('credit_report','identity_match','affordability','watchlist','mock')),
+  status text default 'pending' check(status in ('pending','not_configured','manual_required','completed','failed')),
+  request_payload jsonb default '{}'::jsonb,
+  response_payload jsonb default '{}'::jsonb,
+  bureau_score numeric,
+  bureau_decision text check(bureau_decision in ('approve','review','decline') or bureau_decision is null),
+  error_message text,
+  requested_by uuid references staff_profiles(id),
+  reviewed_by uuid references staff_profiles(id),
+  created_at timestamptz default now(),
+  completed_at timestamptz
+);
+
+create table if not exists internal_risk_rules (
+  id uuid primary key default gen_random_uuid(),
+  rule_code text unique not null,
+  title text not null,
+  description text,
+  points int not null default 0,
+  severity text default 'medium' check(severity in ('low','medium','high','critical')),
+  active boolean default true,
+  created_at timestamptz default now()
+);
+
+create table if not exists internal_risk_scores (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid references customers(id),
+  loan_id uuid references loans(id),
+  score int not null default 0 check(score between 0 and 100),
+  risk_band text not null default 'low' check(risk_band in ('low','medium','high','critical')),
+  decision text not null default 'manual_review' check(decision in ('eligible','manual_review','decline')),
+  factors jsonb default '[]'::jsonb,
+  calculated_by text default 'AILIFE_INTERNAL_RISK_ENGINE',
+  calculated_at timestamptz default now(),
+  created_at timestamptz default now()
+);
+
+create table if not exists manual_credit_reviews (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid references customers(id),
+  loan_id uuid references loans(id),
+  internal_risk_score_id uuid references internal_risk_scores(id),
+  credit_bureau_check_id uuid references credit_bureau_checks(id),
+  status text default 'pending' check(status in ('pending','in_review','approved','rejected','escalated')),
+  reviewer_id uuid references staff_profiles(id),
+  recommendation text check(recommendation in ('approve','approve_with_conditions','decline','escalate') or recommendation is null),
+  conditions text,
+  notes text,
+  created_at timestamptz default now(),
+  reviewed_at timestamptz
+);
+
+create table if not exists credit_bureau_audit_events (
+  id uuid primary key default gen_random_uuid(),
+  actor_id uuid references staff_profiles(id),
+  event_type text not null,
+  entity_type text not null default 'credit_bureau',
+  entity_id uuid,
+  details jsonb default '{}'::jsonb,
+  created_at timestamptz default now()
+);
+
+-- Configuration seeds: disabled until AILIFE completes provider onboarding and receives credentials.
+insert into credit_bureau_providers(provider_code,provider_name,base_url,environment,enabled,live_checks_allowed,notes) values
+('CREDIT_REGISTRY','CreditRegistry Nigeria',null,'sandbox',false,false,'Enter endpoint and credentials after CreditRegistry approval.'),
+('CRC','CRC Credit Bureau',null,'sandbox',false,false,'Optional second bureau connector.'),
+('FIRSTCENTRAL','FirstCentral Credit Bureau',null,'sandbox',false,false,'Optional second bureau connector.'),
+('INTERNAL','AILIFE Internal Risk Engine',null,'production',true,true,'Always available; used before bureau credentials are issued.')
+on conflict(provider_code) do update set provider_name=excluded.provider_name, notes=excluded.notes;
+
+insert into internal_risk_rules(rule_code,title,description,points,severity,active) values
+('DUPLICATE_BVN','Duplicate BVN/NIN detected','Customer BVN or NIN already exists on another customer profile.',35,'critical',true),
+('HIGH_LOAN_AMOUNT','Requested amount is high for product or customer history','Loan amount requires higher approval and manual affordability review.',20,'high',true),
+('NEW_CUSTOMER','New customer with no repayment history','First-time borrower should receive manual review before large exposure.',15,'medium',true),
+('OVERDUE_HISTORY','Customer has overdue or default history','Previous or current overdue loan increases credit risk.',30,'high',true),
+('MISSING_KYC','KYC documents or guarantor details incomplete','Incomplete onboarding requires manual review.',25,'high',true),
+('BRANCH_DEFAULT_RISK','Branch is inactive or recently suspended due to defaults','Applications from inactive/high-default branches require enhanced review.',25,'high',true),
+('STAFF_CONFLICT','Same staff created and approved/recommended transaction','Maker-checker conflict; separate staff approval required.',40,'critical',true)
+on conflict(rule_code) do update set title=excluded.title, description=excluded.description, points=excluded.points, severity=excluded.severity, active=excluded.active;
+
+insert into governance_policies(policy_name,policy_value) values
+('credit_bureau_live_checks_enabled','false'),
+('credit_bureau_default_provider','INTERNAL'),
+('credit_bureau_credentials_status','pending CreditRegistry approval'),
+('manual_credit_review_required_without_bureau','true'),
+('risk_score_manual_review_threshold','40'),
+('risk_score_decline_threshold','75')
+on conflict(policy_name) do update set policy_value=excluded.policy_value;
+
+create or replace view credit_bureau_readiness_report as
+select provider_code, provider_name, environment, enabled, live_checks_allowed,
+case when provider_code='INTERNAL' then 'ready'
+     when enabled=false then 'waiting_for_credentials'
+     when live_checks_allowed=false then 'configured_not_live'
+     else 'live' end as readiness_status,
+notes, updated_at
+from credit_bureau_providers;
+
+create or replace view manual_credit_review_queue as
+select mcr.id, c.full_name as customer_name, c.phone, l.loan_no, l.principal_amount,
+irs.score as internal_score, irs.risk_band, mcr.status, mcr.recommendation,
+mcr.created_at, mcr.reviewed_at
+from manual_credit_reviews mcr
+left join customers c on c.id=mcr.customer_id
+left join loans l on l.id=mcr.loan_id
+left join internal_risk_scores irs on irs.id=mcr.internal_risk_score_id
+order by mcr.created_at desc;
+
+create or replace function calculate_internal_risk_score(p_customer_id uuid, p_loan_id uuid default null)
+returns uuid as $$
+declare
+  v_score int := 0;
+  v_factors jsonb := '[]'::jsonb;
+  v_band text := 'low';
+  v_decision text := 'eligible';
+  v_customer customers%rowtype;
+  v_loan loans%rowtype;
+  v_score_id uuid;
+begin
+  select * into v_customer from customers where id=p_customer_id;
+  if not found then raise exception 'Customer not found'; end if;
+  if p_loan_id is not null then select * into v_loan from loans where id=p_loan_id; end if;
+
+  if coalesce(v_customer.bvn,'')='' and coalesce(v_customer.nin,'')='' then
+    v_score := v_score + 25; v_factors := v_factors || jsonb_build_object('rule','MISSING_KYC','points',25);
+  end if;
+
+  if p_loan_id is not null and coalesce(v_loan.principal_amount,0) >= 400000 then
+    v_score := v_score + 20; v_factors := v_factors || jsonb_build_object('rule','HIGH_LOAN_AMOUNT','points',20);
+  end if;
+
+  if not exists(select 1 from loans where customer_id=p_customer_id and status in ('closed','repaid','approved','disbursed') and (p_loan_id is null or id<>p_loan_id)) then
+    v_score := v_score + 15; v_factors := v_factors || jsonb_build_object('rule','NEW_CUSTOMER','points',15);
+  end if;
+
+  if exists(select 1 from loans where customer_id=p_customer_id and status in ('overdue','defaulted')) then
+    v_score := v_score + 30; v_factors := v_factors || jsonb_build_object('rule','OVERDUE_HISTORY','points',30);
+  end if;
+
+  if v_score >= 75 then v_band := 'critical'; v_decision := 'decline';
+  elsif v_score >= 40 then v_band := 'high'; v_decision := 'manual_review';
+  elsif v_score >= 20 then v_band := 'medium'; v_decision := 'manual_review';
+  else v_band := 'low'; v_decision := 'eligible'; end if;
+
+  insert into internal_risk_scores(customer_id, loan_id, score, risk_band, decision, factors)
+  values(p_customer_id, p_loan_id, least(v_score,100), v_band, v_decision, v_factors)
+  returning id into v_score_id;
+
+  if v_decision <> 'eligible' then
+    insert into manual_credit_reviews(customer_id, loan_id, internal_risk_score_id, status, notes)
+    values(p_customer_id, p_loan_id, v_score_id, 'pending', 'Auto-created by internal risk engine pending manual credit review.');
+  end if;
+
+  return v_score_id;
+end;
+$$ language plpgsql;
