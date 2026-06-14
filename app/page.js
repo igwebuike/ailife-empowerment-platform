@@ -31,6 +31,7 @@ export default function Home(){
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/onboard" className="btn btn-gold">Open Customer Account</Link>
             <Link href="/login" className="btn bg-white text-purple-950">Enter Staff Portal</Link>
+            <Link href="/admin-login" className="btn bg-purple-800 text-white ring-1 ring-white/20">Admin Portal</Link>
           </div>
         </div>
         <div className="rounded-[2rem] bg-white p-6 text-slate-900 shadow-2xl ring-1 ring-white/30">
@@ -58,5 +59,11 @@ export default function Home(){
     <section className="mx-auto max-w-7xl px-5 py-16">
       <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">{features.map(([t,d,Icon])=><div key={t} className="card p-6"><Icon className="text-purple-800"/><h3 className="mt-4 text-xl font-black">{t}</h3><p className="mt-2 text-slate-600">{d}</p></div>)}</div>
     </section>
+    <footer className="border-t bg-white px-5 py-8">
+      <div className="mx-auto flex max-w-7xl flex-col gap-2 text-sm font-semibold text-slate-600 md:flex-row md:items-center md:justify-between">
+        <div>© AILIFE Empowerment Digital Microfinance Platform</div>
+        <div>Customer Care: <a className="text-purple-900" href="tel:+2349060085384">+2349060085384</a> · Email: <a className="text-purple-900" href="mailto:ailife018@gmail.com">ailife018@gmail.com</a></div>
+      </div>
+    </footer>
   </>
 }

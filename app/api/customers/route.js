@@ -12,6 +12,8 @@ export async function POST(req) {
         phone,
         branch,
         loan_product,
+        savings_product,
+        repayment_method,
         bvn,
         nin,
         address,
@@ -25,19 +27,21 @@ export async function POST(req) {
         status
       )
       VALUES
-      ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'Draft')
+      ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,'Draft')
       RETURNING id`,
       [
         data.fullName,
         data.phone,
         data.branch,
         data.loanProduct,
+        data.savingsProduct,
+        data.repaymentMethod,
         data.bvn,
         data.nin,
         data.address,
         data.businessType,
-        data.requestedAmount || null,
-        data.income || null,
+        data.requestedAmount ? Number(String(data.requestedAmount).replace(/[^0-9.]/g, '')) : null,
+        data.income ? Number(String(data.income).replace(/[^0-9.]/g, '')) : null,
         data.loanPurpose,
         data.guarantorName,
         data.guarantorPhone,
@@ -45,19 +49,9 @@ export async function POST(req) {
       ]
     );
 
-    return NextResponse.json({
-      success: true,
-      customerId: result.rows[0].id
-    });
+    return NextResponse.json({ success: true, customerId: result.rows[0].id });
   } catch (error) {
     console.error("Customer onboarding failed:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Customer onboarding failed"
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: "Customer onboarding failed" }, { status: 500 });
   }
 }

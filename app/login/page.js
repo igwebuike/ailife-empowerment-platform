@@ -33,6 +33,7 @@ export default function Login(){
         <button className="btn btn-primary mt-6 w-full">Sign In Securely</button>
         <div className="mt-4 flex justify-between text-sm font-bold text-purple-900">
           <a href="/board-login">Board / Investor Login</a>
+          <a href="/admin-login">Admin Login</a>
           <a href="/staff-setup">Initial Staff Setup</a>
         </div>
         {msg&&<p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{msg}</p>}
