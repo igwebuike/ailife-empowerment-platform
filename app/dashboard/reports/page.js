@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 
 import { query } from '@/lib/db'
 function N({v}){return <>{Number(v||0).toLocaleString()}</>}

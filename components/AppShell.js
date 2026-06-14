@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { LayoutDashboard, Users, Banknote, ReceiptText, ShieldAlert, UserCog, BarChart3, Settings, Scale, CheckCircle2, Warehouse, Store, FileText, Bell, Building2, GraduationCap, SearchCheck, Settings2, BrainCircuit, ClipboardList, ClipboardCheck, Network, Landmark } from 'lucide-react'
+import { LayoutDashboard, Users, Banknote, ReceiptText, ShieldAlert, UserCog, BarChart3, Settings, Scale, CheckCircle2, Warehouse, Store, FileText, Bell, Building2, GraduationCap, SearchCheck, Settings2, BrainCircuit, ClipboardList, ClipboardCheck, Network, Landmark, HandCoins, Building, BadgeDollarSign, FileSignature, UploadCloud, KeyRound, TrendingUp } from 'lucide-react'
 import LogoutButton from './LogoutButton'
 const nav=[
  ['/dashboard','Command Center',LayoutDashboard],
@@ -21,6 +21,14 @@ const nav=[
  ['/dashboard/credit-config','Bureau Config',Settings2],
  ['/dashboard/risk-scoring','Risk Scoring',BrainCircuit],
  ['/dashboard/manual-credit-review','Manual Credit Review',ClipboardList],
+ ['/dashboard/credit-services','Credit Services',HandCoins],
+ ['/dashboard/service-clients','Service Clients',Building],
+ ['/dashboard/credit-check-sales','Credit Check Sales',BadgeDollarSign],
+ ['/dashboard/consent-forms','Consent Forms',FileSignature],
+ ['/dashboard/bureau-uploads','Bureau Upload Queue',UploadCloud],
+ ['/dashboard/saas-platform','MFI SaaS Platform',Store],
+ ['/dashboard/api-access','Future API Access',KeyRound],
+ ['/dashboard/revenue','Revenue',TrendingUp],
  ['/dashboard/alerts','Fraud Alerts',ShieldAlert],
  ['/dashboard/staff','Staff & Roles',UserCog],
  ['/dashboard/staff-onboarding','Staff Onboarding',ClipboardCheck],

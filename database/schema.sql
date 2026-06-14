@@ -1030,3 +1030,167 @@ begin
   return v_score_id;
 end;
 $$ language plpgsql;
+
+
+-- =========================
+-- 13) PHASE 1-4 EXPANSION: CONTRIBUTOR + CREDIT SERVICES + MICROFINANCE SAAS
+-- =========================
+
+create table if not exists service_clients (
+  id uuid primary key default gen_random_uuid(),
+  organization_name text not null,
+  client_type text not null default 'microfinance' check(client_type in ('microfinance','cooperative','ngo','vsla','sme_lender','agent_network','other')),
+  contact_name text,
+  email text unique,
+  phone text,
+  address text,
+  status text default 'lead' check(status in ('lead','onboarding','active','suspended','inactive','rejected')),
+  plan_code text default 'starter',
+  kyc_status text default 'pending' check(kyc_status in ('pending','verified','rejected')),
+  notes text,
+  created_at timestamptz default now()
+);
+
+create table if not exists customer_consents (
+  id uuid primary key default gen_random_uuid(),
+  service_client_id uuid references service_clients(id),
+  customer_id uuid references customers(id),
+  customer_name text not null,
+  phone text,
+  bvn text,
+  nin text,
+  consent_type text not null check(consent_type in ('internal_risk_check','credit_bureau_check','bureau_reporting','data_processing','full_credit_services')),
+  consent_channel text default 'digital' check(consent_channel in ('digital','paper','sms','whatsapp','agent_captured')),
+  consent_text text,
+  signed_at timestamptz,
+  expires_at timestamptz,
+  status text default 'pending' check(status in ('pending','signed','expired','revoked','rejected')),
+  evidence_url text,
+  created_at timestamptz default now()
+);
+
+create table if not exists credit_service_products (
+  id uuid primary key default gen_random_uuid(),
+  product_code text unique not null,
+  product_name text not null,
+  description text,
+  service_type text not null check(service_type in ('internal_risk_report','credit_bureau_report','bulk_screening','sme_assessment','saas_subscription','implementation')),
+  price_amount numeric(14,2) default 0,
+  currency text default 'NGN',
+  requires_bureau_credentials boolean default false,
+  requires_customer_consent boolean default true,
+  status text default 'active' check(status in ('active','inactive')),
+  created_at timestamptz default now()
+);
+
+create table if not exists credit_service_requests (
+  id uuid primary key default gen_random_uuid(),
+  request_no text unique default concat('CSR-', upper(substr(encode(gen_random_bytes(8),'hex'),1,12))),
+  service_client_id uuid references service_clients(id),
+  consent_id uuid references customer_consents(id),
+  requested_by uuid references staff_profiles(id),
+  request_type text not null default 'internal_risk_report',
+  customer_name text,
+  customer_phone text,
+  bvn text,
+  nin text,
+  price_amount numeric(14,2) default 0,
+  payment_status text default 'unpaid' check(payment_status in ('unpaid','paid','waived','refunded')),
+  status text default 'submitted' check(status in ('submitted','awaiting_consent','awaiting_payment','in_review','completed','rejected','cancelled')),
+  internal_score int check(internal_score is null or internal_score between 0 and 100),
+  risk_band text,
+  decision text,
+  report_url text,
+  created_at timestamptz default now(),
+  completed_at timestamptz
+);
+
+create table if not exists credit_check_orders (
+  id uuid primary key default gen_random_uuid(),
+  order_no text unique default concat('CCO-', upper(substr(encode(gen_random_bytes(8),'hex'),1,12))),
+  service_request_id uuid references credit_service_requests(id),
+  service_client_id uuid references service_clients(id),
+  customer_name text,
+  service_type text not null,
+  amount numeric(14,2) not null default 0,
+  currency text default 'NGN',
+  status text default 'pending' check(status in ('pending','paid','failed','cancelled','refunded')),
+  payment_reference text,
+  created_at timestamptz default now()
+);
+
+create table if not exists bureau_upload_queue (
+  id uuid primary key default gen_random_uuid(),
+  provider_code text default 'creditregistry',
+  upload_type text not null check(upload_type in ('person','business','account','account_history','default_update','closure','correction')),
+  source_table text,
+  source_id uuid,
+  payload jsonb,
+  status text default 'queued' check(status in ('queued','blocked_no_credentials','submitted','accepted','rejected','failed','cancelled')),
+  upload_id text,
+  transaction_id text,
+  error_message text,
+  created_at timestamptz default now(),
+  processed_at timestamptz
+);
+
+create table if not exists saas_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  service_client_id uuid references service_clients(id),
+  client_name text not null,
+  plan_code text not null check(plan_code in ('starter','growth','pro','enterprise')),
+  status text default 'trial' check(status in ('trial','active','past_due','suspended','cancelled')),
+  monthly_fee numeric(14,2) default 0,
+  users_allowed int default 5,
+  branches_allowed int default 1,
+  started_at timestamptz default now(),
+  next_billing_date date,
+  created_at timestamptz default now()
+);
+
+create table if not exists api_clients (
+  id uuid primary key default gen_random_uuid(),
+  service_client_id uuid references service_clients(id),
+  client_name text not null,
+  environment text default 'sandbox' check(environment in ('sandbox','production')),
+  status text default 'disabled' check(status in ('disabled','pending_approval','active','suspended','revoked')),
+  public_key_ref text,
+  secret_key_ref text,
+  rate_limit_per_day int default 100,
+  last_used_at timestamptz,
+  created_at timestamptz default now()
+);
+
+create table if not exists revenue_events (
+  id uuid primary key default gen_random_uuid(),
+  event_type text not null check(event_type in ('credit_check','risk_report','bulk_screening','subscription','implementation','training','other')),
+  service_client_id uuid references service_clients(id),
+  customer_name text,
+  amount numeric(14,2) not null default 0,
+  currency text default 'NGN',
+  status text default 'pending' check(status in ('pending','recognized','paid','failed','refunded')),
+  source_reference text,
+  created_at timestamptz default now()
+);
+
+create or replace view phase_revenue_summary as
+select event_type, count(*) as transaction_count, coalesce(sum(amount),0) as total_amount
+from revenue_events
+group by event_type;
+
+-- Phase 3/4 starter seed data
+insert into credit_service_products(product_code,product_name,description,service_type,price_amount,requires_bureau_credentials)
+values
+ ('RISK-001','AILIFE Internal Risk Report','Internal risk score and manual assessment without live bureau data.','internal_risk_report',500,false),
+ ('BULK-001','Bulk Applicant Screening','Bulk screening for small lenders using AILIFE rules and consent workflow.','bulk_screening',10000,false),
+ ('BUREAU-001','Credit Bureau Report','CreditRegistry-powered report, activated only after provider approval.','credit_bureau_report',1500,true),
+ ('SAAS-STARTER','MFI SaaS Starter','Loan, savings, collections and staff monitoring platform for small lenders.','saas_subscription',25000,false)
+on conflict (product_code) do nothing;
+
+insert into service_clients(organization_name,client_type,contact_name,email,phone,status,plan_code,kyc_status,notes)
+values ('Demo Cooperative Client','cooperative','Demo Admin','demo-client@ailifeempowerment.com','08000000000','lead','starter','pending','Placeholder client for testing credit services workflow.')
+on conflict (email) do nothing;
+
+insert into bureau_upload_queue(upload_type,source_table,status,payload,error_message)
+values ('account','loans','blocked_no_credentials','{"provider":"creditregistry","mode":"awaiting_credentials"}'::jsonb,'Awaiting approved CreditRegistry subscriber credentials before live upload.')
+on conflict do nothing;

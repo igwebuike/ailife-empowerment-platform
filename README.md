@@ -121,3 +121,30 @@ Recommended deployment flow:
 3. Use Internal Risk Scoring + Manual Credit Review immediately.
 4. After CreditRegistry approval, add credentials in Render environment variables.
 5. Update the Credit Bureau Configuration screen/table to enable production checks.
+
+
+## v4.0 Phase 1 to Phase 4 Expansion
+
+This build now supports the full vision:
+
+### Phase 1 — AILIFE Microfinance Operations
+- Staff, branches, customers, onboarding, loans, savings, collections, reports and governance.
+
+### Phase 2 — Credit Bureau Contributor
+- Bureau upload queue for persons, businesses, accounts, account history, defaults, closures and corrections.
+- Designed for CreditRegistry AutoCred activation after credentials are approved.
+
+### Phase 3 — Credit Risk & Verification Services
+- Credit Services Marketplace.
+- Service client onboarding for smaller MFIs, cooperatives, NGOs and lenders.
+- Customer consent forms.
+- Paid internal risk reports and future bureau-enabled checks.
+- Billing/order tracking.
+
+### Phase 4 — Microfinance SaaS Platform
+- SaaS subscriptions for smaller lenders.
+- API client access placeholders.
+- Revenue dashboard.
+- Plan-based limits for users and branches.
+
+Important: bureau data resale must be permitted by CreditRegistry and applicable law before enabling bureau-backed resale. The platform can immediately sell AILIFE internal risk reports and operational SaaS services while live bureau credentials and permissions are pending.
