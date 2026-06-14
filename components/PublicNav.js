@@ -1,3 +1,18 @@
-import Image from 'next/image'
 import Link from 'next/link'
-export default function PublicNav(){return <header className="sticky top-0 z-50 glass"><div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3"><Link href="/" className="flex items-center gap-3"><Image src="/ailife-logo.png" alt="AILIFE logo" width={54} height={54} className="rounded-xl object-cover"/><div><div className="text-lg font-black text-purple-950">AILIFE Empowerment</div><div className="text-xs font-semibold text-slate-500">Digital Microfinance Platform</div></div></Link><nav className="flex flex-wrap items-center justify-end gap-2 text-sm font-bold"><Link href="/onboard" className="hidden sm:inline rounded-full px-3 py-2 text-purple-900 hover:bg-purple-50">Open Account</Link><Link href="/investor-login" className="hidden md:inline rounded-full px-3 py-2 text-purple-900 hover:bg-purple-50">Investor</Link><Link href="/admin-login" className="hidden md:inline rounded-full px-3 py-2 text-purple-900 hover:bg-purple-50">Admin</Link><Link href="/login" className="btn btn-primary">Staff Login</Link></nav></div></header>}
+export default function PublicNav(){
+  return <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
+      <Link href="/" className="flex items-center gap-3">
+        <img src="/ailife-logo.png" alt="AILIFE" className="h-9 w-auto"/>
+        <div><div className="text-xl font-black text-purple-950">AILIFE Empowerment</div><div className="text-sm font-semibold text-slate-500">Digital Microfinance Platform</div></div>
+      </Link>
+      <nav className="hidden items-center gap-7 font-black text-purple-900 md:flex">
+        <Link href="/onboard">Open Account</Link>
+        <Link href="/services">Credit Services</Link>
+        <Link href="/investor-login">Investor</Link>
+        <Link href="/admin-login">Admin</Link>
+        <Link href="/login" className="rounded-full bg-gradient-to-r from-purple-800 to-violet-700 px-6 py-3 text-white shadow-lg shadow-purple-900/20">Staff Login</Link>
+      </nav>
+    </div>
+  </header>
+}

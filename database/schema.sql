@@ -424,9 +424,10 @@ create table if not exists agent_activity_logs (
 -- 10) REGULATORY / MANAGEMENT REPORTING
 -- =========================
 create or replace view daily_collection_report as
-select date(created_at) report_date, branch, type, status, count(*) transaction_count, sum(amount) total_amount
-from transactions
-group by date(created_at), branch, type, status;
+select date(t.created_at) report_date, coalesce(c.branch,'Head Office') branch, t.type, t.status, count(*) transaction_count, sum(t.amount) total_amount
+from transactions t
+left join customers c on c.id=t.customer_id
+group by date(t.created_at), coalesce(c.branch,'Head Office'), t.type, t.status;
 
 create or replace view loan_aging_report as
 select l.id, coalesce(c.full_name,l.customer_name) customer_name, l.principal, l.outstanding_balance, l.due_date, l.status,
@@ -545,25 +546,8 @@ insert into loans(customer_id,customer_name,principal,outstanding_balance,intere
 select id,full_name,70000,70000,5.0,'disbursed',current_date + interval '23 weeks' from customers where phone='08000000001'
 on conflict do nothing;
 
--- Render PostgreSQL RLS starter policies. For Render Postgres these auth.* calls are ignored only if not executed there.
-do $$ begin
-  alter table staff_profiles enable row level security; alter table customers enable row level security; alter table savings_accounts enable row level security; alter table loans enable row level security; alter table transactions enable row level security; alter table risk_alerts enable row level security; alter table audit_logs enable row level security; alter table governance_policies enable row level security; alter table kyc_documents enable row level security; alter table agents enable row level security; alter table branch_cash_accounts enable row level security; alter table notification_outbox enable row level security;
-exception when undefined_function then null; end $$;
-
-do $$ begin create policy "customers insert public onboarding" on customers for insert with check (true); exception when duplicate_object then null; end $$;
-do $$ begin create policy "staff read write authenticated" on staff_profiles for all using (auth.role()='authenticated') with check (auth.role()='authenticated'); exception when duplicate_object then null; end $$;
-do $$ begin create policy "customers staff all" on customers for all using (auth.role()='authenticated') with check (auth.role()='authenticated'); exception when duplicate_object then null; end $$;
-do $$ begin create policy "all operational tables staff" on savings_accounts for all using (auth.role()='authenticated') with check (auth.role()='authenticated'); exception when duplicate_object then null; end $$;
-do $$ begin create policy "loans staff all" on loans for all using (auth.role()='authenticated') with check (auth.role()='authenticated'); exception when duplicate_object then null; end $$;
-do $$ begin create policy "transactions staff all" on transactions for all using (auth.role()='authenticated') with check (auth.role()='authenticated'); exception when duplicate_object then null; end $$;
-do $$ begin create policy "alerts staff all" on risk_alerts for all using (auth.role()='authenticated') with check (auth.role()='authenticated'); exception when duplicate_object then null; end $$;
-do $$ begin create policy "audit staff read" on audit_logs for select using (auth.role()='authenticated'); exception when duplicate_object then null; end $$;
-do $$ begin create policy "policies staff all" on governance_policies for all using (auth.role()='authenticated') with check (auth.role()='authenticated'); exception when duplicate_object then null; end $$;
-do $$ begin create policy "documents staff all" on kyc_documents for all using (auth.role()='authenticated') with check (auth.role()='authenticated'); exception when duplicate_object then null; end $$;
-do $$ begin create policy "agents staff all" on agents for all using (auth.role()='authenticated') with check (auth.role()='authenticated'); exception when duplicate_object then null; end $$;
-do $$ begin create policy "cash staff all" on branch_cash_accounts for all using (auth.role()='authenticated') with check (auth.role()='authenticated'); exception when duplicate_object then null; end $$;
-do $$ begin create policy "outbox staff all" on notification_outbox for all using (auth.role()='authenticated') with check (auth.role()='authenticated'); exception when duplicate_object then null; end $$;
-
+-- Render PostgreSQL uses application-level authentication and role controls.
+-- Supabase/RLS policies intentionally removed.
 
 -- =========================
 -- RENDER POSTGRES ADMIN SEED
@@ -973,7 +957,7 @@ notes, updated_at
 from credit_bureau_providers;
 
 create or replace view manual_credit_review_queue as
-select mcr.id, c.full_name as customer_name, c.phone, l.loan_no, l.principal_amount,
+select mcr.id, c.full_name as customer_name, c.phone, l.id as loan_no, l.principal,
 irs.score as internal_score, irs.risk_band, mcr.status, mcr.recommendation,
 mcr.created_at, mcr.reviewed_at
 from manual_credit_reviews mcr
@@ -1001,15 +985,15 @@ begin
     v_score := v_score + 25; v_factors := v_factors || jsonb_build_object('rule','MISSING_KYC','points',25);
   end if;
 
-  if p_loan_id is not null and coalesce(v_loan.principal_amount,0) >= 400000 then
+  if p_loan_id is not null and coalesce(v_loan.principal,0) >= 400000 then
     v_score := v_score + 20; v_factors := v_factors || jsonb_build_object('rule','HIGH_LOAN_AMOUNT','points',20);
   end if;
 
-  if not exists(select 1 from loans where customer_id=p_customer_id and status in ('closed','repaid','approved','disbursed') and (p_loan_id is null or id<>p_loan_id)) then
+  if not exists(select 1 from loans where customer_id=p_customer_id and status in ('closed','approved','disbursed') and (p_loan_id is null or id<>p_loan_id)) then
     v_score := v_score + 15; v_factors := v_factors || jsonb_build_object('rule','NEW_CUSTOMER','points',15);
   end if;
 
-  if exists(select 1 from loans where customer_id=p_customer_id and status in ('overdue','defaulted')) then
+  if exists(select 1 from loans where customer_id=p_customer_id and status in ('defaulted')) then
     v_score := v_score + 30; v_factors := v_factors || jsonb_build_object('rule','OVERDUE_HISTORY','points',30);
   end if;
 
@@ -1194,3 +1178,25 @@ on conflict (email) do nothing;
 insert into bureau_upload_queue(upload_type,source_table,status,payload,error_message)
 values ('account','loans','blocked_no_credentials','{"provider":"creditregistry","mode":"awaiting_credentials"}'::jsonb,'Awaiting approved CreditRegistry subscriber credentials before live upload.')
 on conflict do nothing;
+
+-- =========================
+-- V4.2 PRODUCTION CONFIGURATION PATCH
+-- =========================
+insert into branches(branch_code,name,state,area,status) values
+ ('EDE','Ede Branch','Osun','Osun','active'),
+ ('OSOGBO','Osogbo Branch','Osun','Osun','active'),
+ ('OWODE','Owode Branch','Osun','Osun','active'),
+ ('IBADAN1','Ibadan 1','Oyo','Ibadan','active'),
+ ('IBADAN2','Ibadan 2','Oyo','Ibadan','active'),
+ ('RUMUDARA','Rumudara Branch','Rivers','Port Harcourt','active'),
+ ('RUMUKURUSHI','Rumukurushi Branch','Rivers','Port Harcourt','inactive'),
+ ('ENEKA','Eneka Branch','Rivers','Port Harcourt','inactive')
+on conflict(branch_code) do update set state=excluded.state, area=excluded.area, status=excluded.status;
+
+update staff_profiles set mfa_required=true where email in ('admin@ailifeempowerment.com','finance@ailifeempowerment.com','compliance@ailifeempowerment.com');
+
+insert into staff_profiles(full_name,email,role,branch,mfa_required,status,password_hash) values
+('AILIFE Investor Viewer','investor@ailifeempowerment.com','board_viewer','Head Office',true,'active','a55b1fd8d8992ecf3cc32f4d90445d67:8f0625f7e8760a9ec5f20a0b44377d0cce4a04de276b87980bfb061aab25a7f1'),
+('AILIFE Credit Officer','credit@ailifeempowerment.com','credit_officer','Head Office',true,'active','a55b1fd8d8992ecf3cc32f4d90445d67:8f0625f7e8760a9ec5f20a0b44377d0cce4a04de276b87980bfb061aab25a7f1'),
+('AILIFE Branch Manager','branchmanager@ailifeempowerment.com','branch_manager','Head Office',true,'active','a55b1fd8d8992ecf3cc32f4d90445d67:8f0625f7e8760a9ec5f20a0b44377d0cce4a04de276b87980bfb061aab25a7f1')
+on conflict(email) do nothing;
