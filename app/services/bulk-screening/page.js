@@ -1,0 +1,3 @@
+import PublicNav from '@/components/PublicNav'
+import Link from 'next/link'
+export default function Page(){return <><PublicNav/><main className="mx-auto max-w-5xl px-5 py-12"><div className="card p-8"><p className="font-black uppercase tracking-widest text-purple-700">Bulk Applicant Screening</p><h1 className="mt-2 text-4xl font-black text-purple-950">Screen multiple applicants for lending decisions</h1><p className="mt-4 text-slate-600">For partner MFIs, cooperatives and lending programs that need bulk borrower pre-screening, risk grading and manual credit review routing.</p><Link href="/services/request" className="btn btn-primary mt-8 inline-flex">Start Bulk Screening</Link></div></main></>}
