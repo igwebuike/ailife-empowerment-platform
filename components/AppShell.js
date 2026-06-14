@@ -32,7 +32,7 @@ const nav=[
  ['/dashboard/alerts','Fraud Alerts',ShieldAlert],
  ['/dashboard/staff','Staff & Roles',UserCog],
  ['/dashboard/staff-onboarding','Staff Onboarding',ClipboardCheck],
- ['/dashboard/training','Staff Training',GraduationCap, SearchCheck, Settings2, BrainCircuit, ClipboardList],
+ ['/dashboard/training','Staff Training',GraduationCap],
  ['/dashboard/onboarding-checklist','Onboarding Checklists',ClipboardCheck],
  ['/dashboard/reports','Regulatory Reports',BarChart3],
  ['/dashboard/settings','Governance',Settings]

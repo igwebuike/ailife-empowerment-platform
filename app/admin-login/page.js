@@ -1,28 +1,4 @@
+'use client'
 import PublicNav from '@/components/PublicNav'
-import Link from 'next/link'
-import { ShieldCheck } from 'lucide-react'
-
-export default function AdminLogin(){
-  return (
-    <>
-      <PublicNav/>
-      <main className="min-h-screen bg-slate-50 px-5 py-20">
-        <div className="mx-auto max-w-xl rounded-3xl bg-white p-8 shadow-xl ring-1 ring-slate-200">
-          <ShieldCheck className="text-purple-800" size={34}/>
-          <h1 className="mt-5 text-4xl font-black text-purple-950">Admin Portal Access</h1>
-          <p className="mt-4 text-lg leading-8 text-slate-600">System administrators can manage platform configuration, staff setup, roles, branch access, savings products, repayment methods and governance settings.</p>
-          <form className="mt-8 space-y-5">
-            <label className="block space-y-2"><span className="font-bold">Admin Email</span><input className="input" type="email" placeholder="admin@ailifeempowerment.com" /></label>
-            <label className="block space-y-2"><span className="font-bold">Password</span><input className="input" type="password" /></label>
-            <label className="block space-y-2"><span className="font-bold">2FA Code</span><input className="input" placeholder="Required when MFA is enabled" /></label>
-            <Link href="/dashboard/admin" className="btn btn-primary w-full justify-center text-center">Enter Admin Portal</Link>
-          </form>
-          <div className="mt-5 flex justify-between text-sm font-bold text-purple-900">
-            <Link href="/login">Staff Login</Link>
-            <Link href="/board-login">Board / Investor Login</Link>
-          </div>
-        </div>
-      </main>
-    </>
-  )
-}
+import { useState } from 'react'
+export default function AdminLogin(){const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [otp,setOtp]=useState(''); const [msg,setMsg]=useState(''); async function submit(e){e.preventDefault(); setMsg(''); const res=await fetch('/api/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email,password,otp,portal:'admin'})}); let body={}; try{body=await res.json()}catch{} if(!res.ok){setMsg(body.error||'Admin login failed')}else{location.href='/dashboard'}} return <><PublicNav/><main className="mx-auto grid min-h-[80vh] max-w-6xl place-items-center px-5"><form onSubmit={submit} className="card w-full max-w-md p-8"><h1 className="text-3xl font-black text-purple-950">Admin Login</h1><p className="mt-2 text-slate-600">For Executive Director, Program Director, Accountant and system administrators.</p><label className="mt-6 block text-sm font-bold">Email</label><input className="input mt-2" value={email} onChange={e=>setEmail(e.target.value)} type="email" required/><label className="mt-4 block text-sm font-bold">Password</label><input className="input mt-2" value={password} onChange={e=>setPassword(e.target.value)} type="password" required/><label className="mt-4 block text-sm font-bold">2FA Code</label><input className="input mt-2" value={otp} onChange={e=>setOtp(e.target.value)} placeholder="Authenticator code when enabled"/><button className="btn btn-primary mt-6 w-full">Enter Admin Command Center</button>{msg&&<p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{msg}</p>}</form></main></>}
