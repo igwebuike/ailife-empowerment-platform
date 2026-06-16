@@ -1200,3 +1200,69 @@ insert into staff_profiles(full_name,email,role,branch,mfa_required,status,passw
 ('AILIFE Credit Officer','credit@ailifeempowerment.com','credit_officer','Head Office',true,'active','a55b1fd8d8992ecf3cc32f4d90445d67:8f0625f7e8760a9ec5f20a0b44377d0cce4a04de276b87980bfb061aab25a7f1'),
 ('AILIFE Branch Manager','branchmanager@ailifeempowerment.com','branch_manager','Head Office',true,'active','a55b1fd8d8992ecf3cc32f4d90445d67:8f0625f7e8760a9ec5f20a0b44377d0cce4a04de276b87980bfb061aab25a7f1')
 on conflict(email) do nothing;
+
+-- v4.4 Financial services expansion: bill payments, airtime credit, POS network, SME cross-border desk
+create table if not exists financial_service_requests (
+  id bigserial primary key,
+  request_no text unique not null,
+  service_type text not null,
+  requester_name text,
+  phone text,
+  branch text,
+  amount numeric(18,2),
+  currency text default 'NGN',
+  status text default 'received',
+  compliance_status text default 'pending_review',
+  payload jsonb default '{}'::jsonb,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table if not exists bill_payment_products (
+  id bigserial primary key,
+  biller_name text not null,
+  category text not null,
+  provider_name text,
+  settlement_account text,
+  commission_rate numeric(8,4) default 0,
+  status text default 'configuration'
+);
+
+create table if not exists airtime_credit_accounts (
+  id bigserial primary key,
+  customer_name text not null,
+  phone text not null,
+  network text,
+  credit_limit numeric(18,2) default 0,
+  outstanding_balance numeric(18,2) default 0,
+  status text default 'active',
+  created_at timestamptz default now()
+);
+
+create table if not exists pos_terminals (
+  id bigserial primary key,
+  terminal_serial text unique,
+  manufacturer text,
+  model text,
+  assigned_agent text,
+  branch text,
+  status text default 'inventory',
+  last_seen_at timestamptz,
+  risk_flag text
+);
+
+create table if not exists sme_cross_border_requests (
+  id bigserial primary key,
+  request_no text unique not null,
+  business_name text not null,
+  corridor text not null,
+  purpose text,
+  amount numeric(18,2),
+  currency text,
+  beneficiary_details jsonb default '{}'::jsonb,
+  kyc_status text default 'pending',
+  aml_status text default 'pending',
+  partner_route text,
+  status text default 'compliance_review',
+  created_at timestamptz default now()
+);
