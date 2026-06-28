@@ -1,3 +1,3 @@
 export const dynamic = 'force-dynamic'
 import DataPage from '@/components/DataPage'
-export default function Page(){return <DataPage title='KYC Document Vault' subtitle='NIN, BVN slip, photos, guarantor forms and uploaded verification evidence.' table='kyc_documents' cols={['doc_type', 'file_name', 'verification_status', 'verified_by', 'created_at']} moneyCols={[]}/>}
+export default function Page(){return <DataPage title='Documents' subtitle='Customer, guarantor, staff and loan document register.' table='documents' cols={['id','owner_type','owner_id','document_name','document_type','document_url','uploaded_by','created_at']} moneyCols={[]}/>} 

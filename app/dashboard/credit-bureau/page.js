@@ -1,3 +1,3 @@
 export const dynamic = 'force-dynamic'
 import DataPage from '@/components/DataPage'
-export default function Page(){return <DataPage title='Credit Bureau Integration Module' subtitle='CreditRegistry/CRC/FirstCentral-ready checks. Live calls stay disabled until credentials are approved; internal risk engine remains active now.' table='credit_bureau_checks' cols={['check_type','status','bureau_score','bureau_decision','error_message','created_at','completed_at']} moneyCols={[]}/>}
+export default function Page(){return <DataPage title='Credit Bureau' subtitle='CreditRegistry request log, consent, SMARTScore and report status.' table='credit_bureau_requests' cols={['id','customer_id','loan_application_id','request_type','provider','consent_given','request_status','smart_score','requested_by','requested_at','completed_at']} moneyCols={[]}/>} 
