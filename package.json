@@ -1,6 +1,6 @@
 {
   "name": "ailife-empowerment-platform",
-  "version": "4.2.0-production-ui-2fa",
+  "version": "5.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",

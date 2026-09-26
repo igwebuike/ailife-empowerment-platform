@@ -1,0 +1,1 @@
+export default function manifest(){return {name:'AIBLE Digital Finance',short_name:'AIBLE',description:'Digital finance for communities, groups, MFIs and SMEs',start_url:'/',display:'standalone',background_color:'#ffffff',theme_color:'#4c1d95',icons:[]}}

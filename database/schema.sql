@@ -1266,3 +1266,57 @@ create table if not exists sme_cross_border_requests (
   status text default 'compliance_review',
   created_at timestamptz default now()
 );
+
+
+-- =========================
+-- AIBLE V5: MULTI-TENANT COMMUNITY FINANCE + FINTECH CORE
+-- =========================
+create table if not exists organizations (
+  id uuid primary key default gen_random_uuid(),
+  organization_code text unique default concat('ORG-',upper(substr(encode(gen_random_bytes(6),'hex'),1,8))),
+  name text not null,
+  organization_type text not null default 'contribution_group' check(organization_type in ('ailife','contribution_group','cooperative','mfi','association','church','sme','other')),
+  contact_name text, email text, phone text,
+  plan_code text default 'starter', status text default 'active' check(status in ('trial','active','suspended','closed')),
+  settings jsonb default '{}'::jsonb,
+  created_at timestamptz default now()
+);
+create table if not exists organization_members (
+  id uuid primary key default gen_random_uuid(), organization_id uuid not null references organizations(id) on delete cascade,
+  customer_id uuid references customers(id) on delete set null, member_no text, full_name text not null, phone text, email text,
+  role text default 'member' check(role in ('owner','admin','collector','treasurer','member','auditor')),
+  status text default 'active' check(status in ('invited','active','suspended','exited')),
+  joined_at timestamptz default now(), unique(organization_id, member_no)
+);
+create table if not exists contribution_plans (
+  id uuid primary key default gen_random_uuid(), organization_id uuid not null references organizations(id) on delete cascade,
+  name text not null, contribution_type text default 'fixed' check(contribution_type in ('fixed','flexible','rotating','target','dues','shares')),
+  amount numeric(14,2) default 0, frequency text default 'monthly' check(frequency in ('daily','weekly','monthly','quarterly','one_time')),
+  penalty_amount numeric(14,2) default 0, starts_on date, ends_on date, status text default 'active', created_at timestamptz default now()
+);
+create table if not exists contributions (
+  id uuid primary key default gen_random_uuid(), organization_id uuid not null references organizations(id),
+  member_id uuid not null references organization_members(id), plan_id uuid references contribution_plans(id),
+  amount numeric(14,2) not null check(amount>0), due_date date, paid_at timestamptz,
+  channel text default 'cash', provider text, provider_reference text, internal_reference text unique default concat('CON-',upper(substr(encode(gen_random_bytes(8),'hex'),1,12))),
+  status text default 'pending' check(status in ('pending','paid','overdue','failed','reversed')),
+  integrity_hash text, created_at timestamptz default now()
+);
+create table if not exists payment_provider_events (
+  id uuid primary key default gen_random_uuid(), provider text not null, event_type text not null, provider_reference text,
+  status text default 'received', payload jsonb default '{}'::jsonb, created_at timestamptz default now()
+);
+create table if not exists password_reset_tokens (
+  id uuid primary key default gen_random_uuid(), staff_id uuid not null references staff_profiles(id) on delete cascade,
+  token_hash text not null, expires_at timestamptz not null, used_at timestamptz, created_at timestamptz default now()
+);
+create table if not exists audit_events (
+  id uuid primary key default gen_random_uuid(), actor_id uuid references staff_profiles(id), action text not null,
+  entity_type text, entity_id text, metadata jsonb default '{}'::jsonb, created_at timestamptz default now()
+);
+create index if not exists idx_contributions_org_status on contributions(organization_id,status);
+create index if not exists idx_org_members_org on organization_members(organization_id);
+create index if not exists idx_reset_token_hash on password_reset_tokens(token_hash);
+insert into organizations(name,organization_type,contact_name,email,plan_code,status)
+select 'AILIFE Empowerment','ailife','Platform Administrator','admin@ailifeempowerment.com','enterprise','active'
+where not exists(select 1 from organizations where organization_type='ailife');

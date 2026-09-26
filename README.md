@@ -1,33 +1,27 @@
-# AILIFE Empowerment Platform v4.2
+# AIBLE v5 — Digital Finance Infrastructure
 
-Production-ready Next.js + PostgreSQL platform package with customer onboarding, staff/admin/investor access, 2FA setup, loans, savings, approvals, reports, credit bureau readiness, credit services, and MFI SaaS modules.
+A deployable Next.js/PostgreSQL upgrade of the AILIFE platform for internal MFI operations plus multi-tenant community-finance SaaS.
 
-## Deploy
+## v5 additions
+- AIBLE Groups: tenants for ajo/esusu, cooperatives, associations, MFIs and SMEs
+- Contribution plans/members/collections data model
+- CreditRegistry adapter configuration
+- Yellow Card integration scaffold (safe/off until approved credentials are supplied)
+- AIBLE Proof scaffold for privacy-preserving hash anchoring (off by default)
+- Password reset token flow; existing TOTP MFA retained
+- Production auth-secret hardening
+- PWA manifest for mobile-ready deployment
+- Integration control center and payment-provider abstraction
+- Existing loans, savings, double-entry ledger, maker-checker, KYC, fraud, staff training and reporting retained
 
-1. Push to GitHub.
-2. Create PostgreSQL database.
-3. Run `database/schema.sql`.
-4. Set environment variables.
-5. Deploy the Next.js web service.
+## Deploy on Render
+1. Push this folder to GitHub.
+2. Create/attach Render PostgreSQL.
+3. Run `database/schema.sql` against the database (safe to re-run; uses `if not exists`/upserts where designed).
+4. Set `DATABASE_URL`, a long random `AUTH_SECRET`, `ENABLE_2FA=true`, `NODE_VERSION=20`, and `NEXT_PUBLIC_SITE_URL`.
+5. Build command: `npm ci && npm run build`
+6. Start command: `npm start`
+7. Keep `CREDIT_REGISTRY_LIVE=false`, `YELLOW_CARD_LIVE=false`, and `BLOCKCHAIN_ANCHOR_ENABLED=false` until approved production credentials/compliance testing are complete.
 
-## Required environment variables
-
-```env
-DATABASE_URL=your_postgres_database_url
-AUTH_SECRET=generate_a_long_random_secret
-ENABLE_2FA=true
-NODE_VERSION=20
-NPM_CONFIG_LEGACY_PEER_DEPS=true
-NPM_CONFIG_PRODUCTION=false
-```
-
-## Default test users
-
-Default password: `ChangeMe123!`
-
-- admin@ailifeempowerment.com
-- investor@ailifeempowerment.com
-- credit@ailifeempowerment.com
-- branchmanager@ailifeempowerment.com
-
-After first login, go to Governance Settings to generate a 2FA secret and add it to Google Authenticator or Microsoft Authenticator. Change all default passwords before real operations.
+## Important before real users
+Change seeded passwords, enroll MFA, configure a real email/SMS provider for reset delivery, encrypt/restrict sensitive KYC data, configure backups/monitoring, run security testing, and validate regulatory/partner requirements for every money-movement feature.
