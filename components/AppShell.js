@@ -1,48 +1,15 @@
+'use client'
 import Link from 'next/link'
-import { LayoutDashboard, Workflow, Database, Users, Banknote, ReceiptText, ShieldAlert, UserCog, BarChart3, Settings, Scale, CheckCircle2, Warehouse, Store, FileText, Bell, Building2, GraduationCap, SearchCheck, Settings2, BrainCircuit, ClipboardList, ClipboardCheck, Network, Landmark, HandCoins, Building, BadgeDollarSign, FileSignature, UploadCloud, KeyRound, TrendingUp, UsersRound, PlugZap } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { LayoutDashboard, Workflow, Database, Users, Banknote, ReceiptText, ShieldAlert, UserCog, BarChart3, Settings, Scale, CheckCircle2, Warehouse, Store, FileText, Bell, Building2, GraduationCap, SearchCheck, Settings2, BrainCircuit, ClipboardList, ClipboardCheck, Network, Landmark, HandCoins, Building, BadgeDollarSign, FileSignature, UploadCloud, KeyRound, TrendingUp, UsersRound, PlugZap, Menu, X } from 'lucide-react'
 import LogoutButton from './LogoutButton'
 const nav=[
- ['/dashboard','Command Center',LayoutDashboard],
- ['/dashboard/operations','Operations Center',Workflow],
- ['/dashboard/data-workbench','Data Workbench',Database],
- ['/dashboard/branches','Branches',Building2],
- ['/dashboard/org-structure','Org Structure',Network],
- ['/dashboard/customers','Customers/KYC',Users],
- ['/dashboard/groups','Groups / Ajo SaaS',UsersRound],
- ['/dashboard/integrations','Fintech Integrations',PlugZap],
- ['/dashboard/client-onboarding','Client Onboarding',ClipboardCheck],
- ['/dashboard/loans','Loans',Banknote],
- ['/dashboard/loan-products','Loan Products',Landmark],
- ['/dashboard/approval-rules','Approval Rules',CheckCircle2],
- ['/dashboard/transactions','Transactions',ReceiptText],
- ['/dashboard/ledger','Double-Entry Ledger',Scale],
- ['/dashboard/approvals','Maker-Checker',CheckCircle2],
- ['/dashboard/cash','Branch Cash',Warehouse],
- ['/dashboard/agents','Agent Banking',Store],
- ['/dashboard/documents','KYC Documents',FileText],
- ['/dashboard/notifications','SMS/Email Outbox',Bell],
- ['/dashboard/credit-history','Credit History 360',FileText],
- ['/dashboard/decision-rules','Decision Rules Engine',BrainCircuit],
- ['/dashboard/credit-bureau','Credit Bureau',SearchCheck],
- ['/dashboard/credit-config','Bureau Config',Settings2],
- ['/dashboard/risk-scoring','Risk Scoring',BrainCircuit],
- ['/dashboard/manual-credit-review','Manual Credit Review',ClipboardList],
- ['/dashboard/credit-services','Credit Services',HandCoins],
- ['/dashboard/service-clients','Service Clients',Building],
- ['/dashboard/credit-check-sales','Credit Check Sales',BadgeDollarSign],
- ['/dashboard/consent-forms','Consent Forms',FileSignature],
- ['/dashboard/bureau-uploads','Bureau Upload Queue',UploadCloud],
- ['/dashboard/saas-platform','MFI SaaS Platform',Store],
- ['/dashboard/api-access','Future API Access',KeyRound],
- ['/dashboard/revenue','Revenue',TrendingUp],
- ['/dashboard/alerts','Fraud Alerts',ShieldAlert],
- ['/dashboard/staff','Staff & Roles',UserCog],
- ['/dashboard/staff-management','Staff Management',UserCog],
- ['/dashboard/staff-onboarding','Staff Onboarding',ClipboardCheck],
- ['/dashboard/training','Staff Training',GraduationCap],
- ['/dashboard/onboarding-checklist','Onboarding Checklists',ClipboardCheck],
- ['/dashboard/reports','Regulatory Reports',BarChart3],
- ['/dashboard/settings','Governance',Settings],
- ['/dashboard/admin/migrations','Migration Center',Database]
+ ['/dashboard','Command Center',LayoutDashboard],['/dashboard/operations','Operations Center',Workflow],['/dashboard/data-workbench','Data Workbench',Database],['/dashboard/branches','Branches',Building2],['/dashboard/org-structure','Org Structure',Network],['/dashboard/customers','Customers/KYC',Users],['/dashboard/groups','Groups / Ajo SaaS',UsersRound],['/dashboard/integrations','Fintech Integrations',PlugZap],['/dashboard/client-onboarding','Client Onboarding',ClipboardCheck],['/dashboard/loans','Loans',Banknote],['/dashboard/loan-products','Loan Products',Landmark],['/dashboard/approval-rules','Approval Rules',CheckCircle2],['/dashboard/transactions','Transactions',ReceiptText],['/dashboard/ledger','Double-Entry Ledger',Scale],['/dashboard/approvals','Maker-Checker',CheckCircle2],['/dashboard/cash','Branch Cash',Warehouse],['/dashboard/agents','Agent Banking',Store],['/dashboard/documents','KYC Documents',FileText],['/dashboard/notifications','SMS/Email Outbox',Bell],['/dashboard/credit-history','Credit History 360',FileText],['/dashboard/decision-rules','Decision Rules Engine',BrainCircuit],['/dashboard/credit-bureau','Credit Bureau',SearchCheck],['/dashboard/credit-config','Bureau Config',Settings2],['/dashboard/risk-scoring','Risk Scoring',BrainCircuit],['/dashboard/manual-credit-review','Manual Credit Review',ClipboardList],['/dashboard/credit-services','Credit Services',HandCoins],['/dashboard/service-clients','Service Clients',Building],['/dashboard/credit-check-sales','Credit Check Sales',BadgeDollarSign],['/dashboard/consent-forms','Consent Forms',FileSignature],['/dashboard/bureau-uploads','Bureau Upload Queue',UploadCloud],['/dashboard/saas-platform','MFI SaaS Platform',Store],['/dashboard/api-access','Future API Access',KeyRound],['/dashboard/revenue','Revenue',TrendingUp],['/dashboard/alerts','Fraud Alerts',ShieldAlert],['/dashboard/staff','Staff & Roles',UserCog],['/dashboard/staff-management','Staff Management',UserCog],['/dashboard/staff-onboarding','Staff Onboarding',ClipboardCheck],['/dashboard/training','Staff Training',GraduationCap],['/dashboard/onboarding-checklist','Onboarding Checklists',ClipboardCheck],['/dashboard/reports','Regulatory Reports',BarChart3],['/dashboard/settings','Governance',Settings],['/dashboard/admin/migrations','Migration Center',Database]
 ]
-export default function AppShell({children}){return <div className="min-h-screen bg-slate-50"><aside className="fixed inset-y-0 left-0 hidden w-80 overflow-y-auto border-r bg-white p-5 lg:block"><div className="mb-8"><div className="text-2xl font-black text-purple-950">AIBLE Command</div><div className="text-sm text-slate-500">Digital Finance Operations</div></div><div className="space-y-1">{nav.map(([href,label,Icon])=><Link key={href} href={href} className="flex items-center gap-3 rounded-2xl px-4 py-3 font-bold text-slate-700 hover:bg-purple-50 hover:text-purple-900"><Icon size={18}/>{label}</Link>)}</div><div className="sticky bottom-0 mt-6 border-t bg-white py-4"><LogoutButton/></div></aside><main className="lg:pl-80"><div className="mx-auto max-w-7xl p-5 lg:p-8">{children}</div></main></div>}
+function NavLinks({pathname,onNavigate}){return <div className="space-y-1">{nav.map(([href,label,Icon])=>{const active=href==='/dashboard'?pathname===href:pathname.startsWith(href);return <Link key={href} href={href} onClick={onNavigate} className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition ${active?'bg-purple-950 text-white shadow-sm':'text-slate-700 hover:bg-purple-50 hover:text-purple-900'}`}><Icon size={18} className="shrink-0"/><span>{label}</span></Link>})}</div>}
+export default function AppShell({children}){const pathname=usePathname();const[open,setOpen]=useState(false);useEffect(()=>{setOpen(false)},[pathname]);useEffect(()=>{document.body.style.overflow=open?'hidden':'';return()=>{document.body.style.overflow=''}},[open]);return <div className="min-h-screen bg-slate-50">
+<header className="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b border-purple-100 bg-white/95 px-4 backdrop-blur lg:hidden"><Link href="/dashboard" className="min-w-0"><div className="truncate text-lg font-black text-purple-950">AIBLE Command</div><div className="text-[11px] font-semibold text-slate-500">Digital Finance Operations</div></Link><button type="button" onClick={()=>setOpen(true)} aria-label="Open navigation menu" className="grid h-11 w-11 place-items-center rounded-2xl bg-purple-950 text-white shadow-sm"><Menu size={23}/></button></header>
+{open&&<div className="fixed inset-0 z-50 lg:hidden"><button aria-label="Close menu" className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]" onClick={()=>setOpen(false)}/><aside className="absolute inset-y-0 left-0 flex w-[min(88vw,22rem)] flex-col bg-white shadow-2xl"><div className="flex items-center justify-between border-b p-5"><div><div className="text-xl font-black text-purple-950">AIBLE Command</div><div className="text-xs text-slate-500">Digital Finance Operations</div></div><button onClick={()=>setOpen(false)} aria-label="Close navigation menu" className="grid h-10 w-10 place-items-center rounded-xl bg-slate-100"><X size={21}/></button></div><nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4"><NavLinks pathname={pathname} onNavigate={()=>setOpen(false)}/></nav><div className="border-t bg-white p-4"><LogoutButton/></div></aside></div>}
+<aside className="fixed inset-y-0 left-0 hidden w-80 overflow-y-auto border-r bg-white p-5 lg:block"><div className="mb-8"><div className="text-2xl font-black text-purple-950">AIBLE Command</div><div className="text-sm text-slate-500">Digital Finance Operations</div></div><NavLinks pathname={pathname}/><div className="sticky bottom-0 mt-6 border-t bg-white py-4"><LogoutButton/></div></aside>
+<main className="pt-16 lg:pl-80 lg:pt-0"><div className="mx-auto w-full max-w-7xl p-4 sm:p-5 lg:p-8">{children}</div></main></div>}
