@@ -37,10 +37,15 @@ export async function POST(req){
 export async function PATCH(req){
  const actor=await getCurrentUser(); if(!['super_admin','admin'].includes(actor?.role)) return NextResponse.json({error:'Only Super Admin or Admin can manage staff accounts.'},{status:403})
  const d=await req.json(); const target=(await query('select * from staff_profiles where id=$1',[d.id])).rows[0]; if(!target) return NextResponse.json({error:'Staff account not found.'},{status:404})
+ // Security actions are handled explicitly so a Reset MFA click cannot be lost among profile fields.
+ if(d.action==='reset_mfa' || d.resetMfa===true){
+   if(!mayEdit(actor,normalizeRole(target.role),normalizeRole(target.role))) return NextResponse.json({error:'You cannot modify this privileged account.'},{status:403})
+   const r=await query('update staff_profiles set totp_secret=null where id=$1 returning id, totp_secret',[d.id])
+   return NextResponse.json({success:true,mfaReset:r.rows[0]?.totp_secret===null})
+ }
  const role=normalizeRole(d.role||target.role); if(!editableRoles.includes(role)&&role!=='super_admin') return NextResponse.json({error:'Invalid role.'},{status:400}); if(!mayEdit(actor,normalizeRole(target.role),role)) return NextResponse.json({error:'You cannot modify this privileged account.'},{status:403})
  let branchId=d.branchId??target.branch_id; if(!branchId&&d.branch){const b=await query('select id from branches where name=$1 limit 1',[d.branch]);branchId=b.rows[0]?.id||null}
  await query(`update staff_profiles set full_name=$1,phone=$2,department=$3,role=$4,branch_id=$5,branch=$6,area=$7,approval_limit=$8,can_view_all_branches=$9,mfa_required=$10,status=$11 where id=$12`,[d.fullName||target.full_name,d.phone??target.phone,d.department||target.department,role,branchId,d.branch??target.branch,d.area??target.area,Number(d.approvalLimit??target.approval_limit??0),Boolean(d.canViewAllBranches??target.can_view_all_branches),Boolean(d.mfaRequired??target.mfa_required),d.status||target.status,d.id])
  let temporaryPassword=null; if(d.activateLogin||d.resetPassword){temporaryPassword=tempPassword();await query('update staff_profiles set password_hash=$1,force_password_change=true where id=$2',[hashPassword(temporaryPassword),d.id])}
- if(d.resetMfa) await query('update staff_profiles set totp_secret=null where id=$1',[d.id])
  return NextResponse.json({success:true,temporaryPassword})
 }

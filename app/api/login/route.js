@@ -13,5 +13,5 @@ export async function POST(req){
  const required=(process.env.ENABLE_2FA==='true') || user.mfa_required
  if(required && user.totp_secret){ if(!verifyTotp(otp,user.totp_secret)) return NextResponse.json({error:'Invalid two-factor authentication code'},{status:401}) }
  await setSession(user)
- return NextResponse.json({ok:true, needs_2fa_setup: required && !user.totp_secret, force_password_change:Boolean(user.force_password_change)})
+ return NextResponse.json({ok:true, needs_2fa_setup: required && !user.totp_secret, force_password_change:Boolean(user.force_password_change), next: user.force_password_change ? '/change-password' : (required && !user.totp_secret ? '/dashboard/settings?setup=1' : null)})
 }
