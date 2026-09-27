@@ -1,0 +1,2 @@
+import {NextResponse} from 'next/server';import {getCurrentUser,hashPassword} from '@/lib/auth';import {query} from '@/lib/db';
+export async function POST(req){const u=await getCurrentUser();if(!u)return NextResponse.json({error:'Unauthorized'},{status:401});const {password}=await req.json();if(!password||password.length<12)return NextResponse.json({error:'Use at least 12 characters.'},{status:400});await query('update staff_profiles set password_hash=$1,force_password_change=false where id=$2',[hashPassword(password),u.id]);return NextResponse.json({ok:true})}
