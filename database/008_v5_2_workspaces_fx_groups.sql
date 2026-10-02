@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS fx_rates (
   source text NOT NULL DEFAULT 'manual',
   effective_at timestamptz NOT NULL DEFAULT now(),
   status text NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive')),
-  created_by uuid REFERENCES staff_profiles(id),
+  created_by integer REFERENCES staff_profiles(id),
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_fx_rates_pair_effective ON fx_rates(base_currency,quote_currency,effective_at DESC);
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS organization_invites (
   token_hash text NOT NULL,
   expires_at timestamptz NOT NULL,
   used_at timestamptz,
-  created_by uuid REFERENCES staff_profiles(id),
+  created_by integer REFERENCES staff_profiles(id),
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
