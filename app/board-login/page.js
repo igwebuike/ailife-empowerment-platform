@@ -1,6 +1,7 @@
 'use client'
 import PublicNav from '@/components/PublicNav'
 import { useState } from 'react'
+import PasswordInput from '@/components/PasswordInput'
 
 export default function BoardLogin(){
   const [email,setEmail]=useState('')
@@ -11,7 +12,7 @@ export default function BoardLogin(){
     e.preventDefault(); setMsg('')
     const res=await fetch('/api/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email,password,otp})})
     const body=await res.json()
-    if(!res.ok){setMsg(body.error||'Login failed')}else{location.href='/dashboard/reports'}
+    if(!res.ok){setMsg(body.error||'Login failed')}else{location.href=body.next || '/dashboard/reports'}
   }
-  return <><PublicNav/><main className="mx-auto grid min-h-[80vh] max-w-6xl place-items-center px-5"><form onSubmit={submit} className="card w-full max-w-md p-8"><h1 className="text-3xl font-black text-purple-950">Board & Investor Access</h1><p className="mt-3 leading-7 text-slate-600">Board members, governing council members and approved investors can securely view portfolio performance, branch reports, governance dashboards and audit-ready summaries based on their assigned access level.</p><label className="mt-6 block text-sm font-bold">Email</label><input className="input mt-2" value={email} onChange={e=>setEmail(e.target.value)} type="email" required/><label className="mt-4 block text-sm font-bold">Password</label><input className="input mt-2" value={password} onChange={e=>setPassword(e.target.value)} type="password" required/><label className="mt-4 block text-sm font-bold">2FA Code</label><input className="input mt-2" value={otp} onChange={e=>setOtp(e.target.value)} placeholder="Required when MFA is enabled"/><button className="btn btn-primary mt-6 w-full">Enter Board Portal</button>{msg&&<p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{msg}</p>}</form></main></>
+  return <><PublicNav/><main className="mx-auto grid min-h-[80vh] max-w-6xl place-items-center px-5"><form onSubmit={submit} className="card w-full max-w-md p-8"><h1 className="text-3xl font-black text-purple-950">Board & Investor Access</h1><p className="mt-3 leading-7 text-slate-600">Board members, governing council members and approved investors can securely view portfolio performance, branch reports, governance dashboards and audit-ready summaries based on their assigned access level.</p><label className="mt-6 block text-sm font-bold">Email</label><input className="input mt-2" value={email} onChange={e=>setEmail(e.target.value)} type="email" required/><label className="mt-4 block text-sm font-bold">Password</label><PasswordInput className="input mt-2" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password" required/><label className="mt-4 block text-sm font-bold">2FA Code</label><input className="input mt-2" value={otp} onChange={e=>setOtp(e.target.value)} placeholder="Required when MFA is enabled"/><button className="btn btn-primary mt-6 w-full">Enter Board Portal</button>{msg&&<p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{msg}</p>}</form></main></>
 }

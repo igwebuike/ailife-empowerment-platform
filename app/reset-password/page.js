@@ -1,4 +1,5 @@
 'use client'
+import PasswordInput from '@/components/PasswordInput'
 
 import { Suspense, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -23,7 +24,7 @@ function ResetPasswordForm(){
     }finally{ setBusy(false) }
   }
 
-  return <main className="min-h-screen grid place-items-center bg-purple-950 p-5"><form onSubmit={go} className="card w-full max-w-md p-7"><h1 className="text-3xl font-black">Choose new password</h1><input className="input mt-5" type="password" minLength="12" value={password} onChange={e=>setPassword(e.target.value)} required placeholder="At least 12 characters"/><button disabled={busy||!token} className="btn btn-primary mt-4 w-full">{busy?'Changing password...':'Change password'}</button>{msg&&<p className="mt-4 text-sm">{msg}</p>}</form></main>
+  return <main className="min-h-screen grid place-items-center bg-purple-950 p-5"><form onSubmit={go} className="card w-full max-w-md p-7"><h1 className="text-3xl font-black">Choose new password</h1><PasswordInput className="input mt-5" minLength="12" value={password} onChange={e=>setPassword(e.target.value)} required placeholder="At least 12 characters"/><button disabled={busy||!token} className="btn btn-primary mt-4 w-full">{busy?'Changing password...':'Change password'}</button>{msg&&<p className="mt-4 text-sm">{msg}</p>}</form></main>
 }
 
 export default function ResetPasswordPage(){
