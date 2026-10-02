@@ -13,3 +13,10 @@ button,a,select,input{touch-action:manipulation}
   .input{min-height:46px;font-size:16px}
   h1{overflow-wrap:anywhere}
 }
+
+/* Responsive operational tables and forms */
+@media (max-width:768px){
+  table{font-size:.78rem}
+  th,td{white-space:nowrap}
+  .mobile-stack{grid-template-columns:1fr!important}
+}
